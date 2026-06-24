@@ -1,0 +1,6 @@
+# .gitignore 파일 내용
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+key-pair/
+.idea/
