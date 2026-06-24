@@ -173,6 +173,3 @@ docker compose -f docker-compose.monitor.yml up -d
 ### 배포 자동화 (CD)
 - [ ] ECR 레포지토리 추가 — 서비스별 도커 이미지 관리
 - [ ] GitHub Actions CD 파이프라인 — 변경된 서비스만 감지하여 빌드/배포
-
-### 비용 최적화
-- [ ] Reserved Instance 전환 — EC2 1년 약정 시 35~40% 절감 가능
