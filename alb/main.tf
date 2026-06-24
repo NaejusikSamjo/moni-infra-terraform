@@ -1,50 +1,122 @@
 resource "aws_lb" "this" {
-  name = "my-alb"
+  name               = "my-alb"
   load_balancer_type = "application"
-  internal = false
-  security_groups = var.security_group_ids
-  subnets = var.subnet_ids
+  internal           = false
+  security_groups    = var.security_group_ids
+  subnets            = var.subnet_ids
+
   enable_deletion_protection = false
 }
 
-resource "aws_lb_target_group" "this" {
-
-  name = "my-target-group"
-  port = 8080
+# api-gateway 타겟그룹 (:8080)
+resource "aws_lb_target_group" "api" {
+  name     = "api-target-group"
+  port     = 8080
   protocol = "HTTP"
-  vpc_id = var.vpc_id
+  vpc_id   = var.vpc_id
 
   health_check {
-    path = "/"
-    protocol = "HTTP"
-    interval = 30
-    timeout = 5
-    healthy_threshold = 2
+    path                = "/"
+    protocol            = "HTTP"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
     unhealthy_threshold = 2
   }
+}
 
-  stickiness {
-    type            = "lb_cookie"
-    cookie_duration = 86400
+# admin-service 타겟그룹 (:19097)
+resource "aws_lb_target_group" "admin" {
+  name     = "admin-target-group"
+  port     = 19097
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+
+  health_check {
+    path                = "/"
+    protocol            = "HTTP"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
   }
 }
 
-
-resource "aws_lb_listener" "this" {
+# HTTP:80 → HTTPS:443 리다이렉트
+resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.this.arn
-  port = 8080
-  protocol = "HTTP"
+  port              = 80
+  protocol          = "HTTP"
 
   default_action {
-    type = "forward"
-    target_group_arn = aws_lb_target_group.this.arn
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
 }
 
-resource "aws_lb_target_group_attachment" "web1" {
-  target_group_arn = aws_lb_target_group.this.arn
-  target_id        = var.target_instance_ids
+# HTTPS:443 리스너 (기본: api-gateway로 forward)
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.this.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.certificate_arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.api.arn
+  }
+}
+
+# 호스트 기반 룰: api.moni.my → api-gateway
+resource "aws_lb_listener_rule" "api" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 10
+
+  condition {
+    host_header {
+      values = ["api.moni.my"]
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.api.arn
+  }
+}
+
+# 호스트 기반 룰: admin.moni.my → admin-service
+resource "aws_lb_listener_rule" "admin" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 20
+
+  condition {
+    host_header {
+      values = ["admin.moni.my"]
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.admin.arn
+  }
+}
+
+# 서비스 EC2 → api-gateway 연결
+resource "aws_lb_target_group_attachment" "api" {
+  target_group_arn = aws_lb_target_group.api.arn
+  target_id        = var.target_instance_id
   port             = 8080
 }
 
-
+# 서비스 EC2 → admin-service 연결
+resource "aws_lb_target_group_attachment" "admin" {
+  target_group_arn = aws_lb_target_group.admin.arn
+  target_id        = var.target_instance_id
+  port             = 19097
+}
