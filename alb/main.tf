@@ -107,6 +107,44 @@ resource "aws_lb_listener_rule" "admin" {
   }
 }
 
+resource "aws_lb_target_group" "grafana" {
+  name     = "grafana-target-group"
+  port     = 3000
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+
+  health_check {
+    path                = "/api/health"
+    protocol            = "HTTP"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+}
+
+resource "aws_lb_listener_rule" "grafana" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 30
+
+  condition {
+    host_header {
+      values = ["grafana.moni.my"]
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.grafana.arn
+  }
+}
+
+resource "aws_lb_target_group_attachment" "grafana" {
+  target_group_arn = aws_lb_target_group.grafana.arn
+  target_id        = var.monitor_instance_id
+  port             = 3000
+}
+
 # 서비스 EC2 → api-gateway 연결
 resource "aws_lb_target_group_attachment" "api" {
   target_group_arn = aws_lb_target_group.api.arn

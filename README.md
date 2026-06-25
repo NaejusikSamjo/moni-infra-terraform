@@ -14,8 +14,9 @@ Cloudflare (api.moni.my / admin.moni.my NS 위임 → Route 53)
   │
   ▼
 ALB (Application Load Balancer) — HTTPS :443
-  │  ├── api.moni.my     → 서비스 EC2 :8080 (api-gateway)
-  │  └── admin.moni.my   → 서비스 EC2 :19097 (admin-service)
+  │  ├── api.moni.my      → 서비스 EC2 :8080  (api-gateway)
+  │  ├── admin.moni.my   → 서비스 EC2 :19097 (admin-service)
+  │  └── grafana.moni.my → 모니터링 EC2 :3000 (Grafana)
   │
   ├── 퍼블릭 서브넷
   │     ├── Bastion Host (t2.micro) — 프라이빗 EC2 SSH 접근용
@@ -29,14 +30,15 @@ ALB (Application Load Balancer) — HTTPS :443
 
 ### 도메인 구성
 
-| 도메인             | 대상                      | 포트    |
-|-----------------|-------------------------|-------|
-| `api.moni.my`   | 서비스 EC2 (api-gateway)   | 8080  |
-| `admin.moni.my` | 서비스 EC2 (admin-service) | 19097 |
+| 도메인               | 대상                        | 포트    |
+|-------------------|---------------------------|-------|
+| `api.moni.my`     | 서비스 EC2 (api-gateway)     | 8080  |
+| `admin.moni.my`   | 서비스 EC2 (admin-service)   | 19097 |
+| `grafana.moni.my` | 모니터링 EC2 (Grafana)        | 3000  |
 
 - 메인 도메인 `moni.my`: Cloudflare 관리 (프론트엔드 연결)
-- 서브도메인 `api.moni.my`, `admin.moni.my`: Cloudflare에서 Route 53으로 NS 위임
-- HTTPS 인증서: ACM (`api.moni.my` + `admin.moni.my` SAN)
+- 서브도메인 `api.moni.my`, `admin.moni.my`, `grafana.moni.my`: Cloudflare에서 Route 53으로 NS 위임
+- HTTPS 인증서: ACM (`api.moni.my` + `admin.moni.my` + `grafana.moni.my` SAN)
 - HTTP :80 → HTTPS :443 리다이렉트 적용
 - Nginx 미사용, ALB 리스너 룰로만 라우팅
 
@@ -59,8 +61,8 @@ ALB (Application Load Balancer) — HTTPS :443
 ```
 moni-infra-terraform/
 ├── main.tf               # 루트 모듈 (모듈 호출)
-├── acm/                  # ACM 인증서 (api.moni.my + admin.moni.my SAN)
-├── alb/                  # ALB + 타겟그룹 2개 + HTTPS 리스너 + 호스트 기반 룰
+├── acm/                  # ACM 인증서 (api.moni.my + admin.moni.my + grafana.moni.my SAN)
+├── alb/                  # ALB + 타겟그룹 3개 + HTTPS 리스너 + 호스트 기반 룰
 ├── ec2/                  # EC2 인스턴스 5개
 ├── vpc/                  # VPC + IGW + 라우트 테이블
 ├── subnet/               # 퍼블릭 2개 / 프라이빗 2개
@@ -82,20 +84,22 @@ moni-infra-terraform/
 HTTP :80  → HTTPS :443 리다이렉트 (301)
 
 HTTPS :443
-  ├── Host: api.moni.my   → api-target-group   (서비스 EC2 :8080)
-  └── Host: admin.moni.my → admin-target-group (서비스 EC2 :19097)
+  ├── Host: api.moni.my     → api-target-group     (서비스 EC2 :8080)
+  ├── Host: admin.moni.my   → admin-target-group   (서비스 EC2 :19097)
+  └── Host: grafana.moni.my → grafana-target-group (모니터링 EC2 :3000)
 ```
 
 ### ACM 인증서
 
 - Primary: `api.moni.my`
-- SAN: `admin.moni.my`
+- SAN: `admin.moni.my`, `grafana.moni.my`
 - Validation: DNS (Route 53 자동 등록)
 
 ### Route 53
 
 - `api.moni.my` Hosted Zone: data source 참조 (Cloudflare에서 NS 위임 완료)
 - `admin.moni.my` Hosted Zone: data source 참조 (Cloudflare에서 NS 위임 완료)
+- `grafana.moni.my` Hosted Zone: data source 참조 (Cloudflare에서 NS 위임 완료)
 - ACM validation CNAME 각 Hosted Zone에 자동 추가
 - ALB A 레코드 (Alias) 각 Hosted Zone에 추가
 
