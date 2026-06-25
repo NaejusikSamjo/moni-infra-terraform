@@ -2,5 +2,5 @@
 .terraform/
 terraform.tfstate
 terraform.tfstate.backup
-key-pair/
+key-pair/my_key.pem
 .idea/

@@ -7,5 +7,3 @@ variable "domain_validation_options" {
     resource_record_value = string
   }))
 }
-variable "alb_dns_name" {}
-variable "alb_zone_id" {}

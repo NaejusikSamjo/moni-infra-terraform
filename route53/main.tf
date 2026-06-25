@@ -53,27 +53,3 @@ resource "aws_acm_certificate_validation" "this" {
     [for r in aws_route53_record.acm_validation_admin : r.fqdn]
   )
 }
-
-resource "aws_route53_record" "api" {
-  zone_id = data.aws_route53_zone.api.zone_id
-  name    = "api.moni.my"
-  type    = "A"
-
-  alias {
-    name                   = var.alb_dns_name
-    zone_id                = var.alb_zone_id
-    evaluate_target_health = true
-  }
-}
-
-resource "aws_route53_record" "admin" {
-  zone_id = data.aws_route53_zone.admin.zone_id
-  name    = "admin.moni.my"
-  type    = "A"
-
-  alias {
-    name                   = var.alb_dns_name
-    zone_id                = var.alb_zone_id
-    evaluate_target_health = true
-  }
-}
