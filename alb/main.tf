@@ -120,3 +120,44 @@ resource "aws_lb_target_group_attachment" "admin" {
   target_id        = var.target_instance_id
   port             = 19097
 }
+
+# grafana 타겟그룹 (:3000)
+resource "aws_lb_target_group" "grafana" {
+  name     = "grafana-target-group"
+  port     = 3000
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+
+  health_check {
+    path                = "/api/health"
+    protocol            = "HTTP"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+}
+
+# 호스트 기반 룰: grafana.moni.my → grafana
+resource "aws_lb_listener_rule" "grafana" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 30
+
+  condition {
+    host_header {
+      values = ["grafana.moni.my"]
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.grafana.arn
+  }
+}
+
+# 모니터링 EC2 → grafana 연결
+resource "aws_lb_target_group_attachment" "grafana" {
+  target_group_arn = aws_lb_target_group.grafana.arn
+  target_id        = var.infra_instance_id
+  port             = 3000
+}

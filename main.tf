@@ -53,6 +53,7 @@ module "alb" {
   subnet_ids         = module.subnet.public_subnet_ids
   security_group_ids = [module.security_group.security_group_id]
   target_instance_id = module.ec2.web1_id
+  infra_instance_id = module.ec2.web2_id
   certificate_arn    = module.route53.certificate_arn
 }
 
@@ -64,6 +65,10 @@ data "aws_route53_zone" "api" {
 data "aws_route53_zone" "admin" {
   name         = "admin.moni.my"
   private_zone = false
+}
+
+data "aws_route53_zone" "grafana" {
+  zone_id = "Z0650037E5KL9WC3NDZ7"
 }
 
 resource "aws_route53_record" "api" {
@@ -82,6 +87,19 @@ resource "aws_route53_record" "api" {
 resource "aws_route53_record" "admin" {
   zone_id         = data.aws_route53_zone.admin.zone_id
   name            = "admin.moni.my"
+  type            = "A"
+  allow_overwrite = true
+
+  alias {
+    name                   = module.alb.dns_name
+    zone_id                = module.alb.zone_id
+    evaluate_target_health = true
+  }
+}
+
+resource "aws_route53_record" "grafana" {
+  zone_id         = data.aws_route53_zone.grafana.zone_id
+  name            = "grafana.moni.my"
   type            = "A"
   allow_overwrite = true
 
