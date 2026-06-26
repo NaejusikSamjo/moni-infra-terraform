@@ -52,8 +52,9 @@ module "alb" {
   vpc_id             = module.vpc.vpc_id
   subnet_ids         = module.subnet.public_subnet_ids
   security_group_ids = [module.security_group.security_group_id]
-  target_instance_id = module.ec2.web1_id
-  infra_instance_id = module.ec2.web2_id
+  target_instance_id  = module.ec2.web1_id
+  infra_instance_id   = module.ec2.web2_id
+  monitor_instance_id = module.ec2.web3_id
   certificate_arn    = module.route53.certificate_arn
 }
 

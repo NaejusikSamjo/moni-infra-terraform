@@ -9,3 +9,7 @@ output "web1_id" {
 output "web2_id" {
   value = aws_instance.web2.id
 }
+
+output "web3_id" {
+  value = aws_instance.web3.id
+}

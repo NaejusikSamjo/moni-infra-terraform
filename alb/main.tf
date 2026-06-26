@@ -158,6 +158,6 @@ resource "aws_lb_listener_rule" "grafana" {
 # 모니터링 EC2 → grafana 연결
 resource "aws_lb_target_group_attachment" "grafana" {
   target_group_arn = aws_lb_target_group.grafana.arn
-  target_id        = var.infra_instance_id
+  target_id        = var.monitor_instance_id
   port             = 3000
 }
