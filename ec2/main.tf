@@ -32,6 +32,7 @@ resource "aws_instance" "web1" {
   vpc_security_group_ids = [var.security_group_id]
   availability_zone      = "ap-northeast-2a"
   key_name               = var.key_name
+  iam_instance_profile   = var.instance_profile_name
 
   tags = {
     Name = "service"

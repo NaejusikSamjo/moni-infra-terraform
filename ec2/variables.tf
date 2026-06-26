@@ -5,3 +5,5 @@ variable "public_subnet_ids" {}
 variable "private_subnet_ids" {}
 
 variable "security_group_id" {}
+
+variable "instance_profile_name" {}

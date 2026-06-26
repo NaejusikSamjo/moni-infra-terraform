@@ -23,12 +23,17 @@ module "security_group" {
   vpc_id = module.vpc.vpc_id
 }
 
+module "ecr" {
+  source = "./ecr"
+}
+
 module "ec2" {
-  source             = "./ec2"
-  security_group_id  = module.security_group.security_group_id
-  public_subnet_ids  = module.subnet.public_subnet_ids
-  private_subnet_ids = module.subnet.private_subnet_ids
-  key_name           = module.key_pair.key_name
+  source                = "./ec2"
+  security_group_id     = module.security_group.security_group_id
+  public_subnet_ids     = module.subnet.public_subnet_ids
+  private_subnet_ids    = module.subnet.private_subnet_ids
+  key_name              = module.key_pair.key_name
+  instance_profile_name = module.ecr.instance_profile_name
 }
 
 module "s3" {

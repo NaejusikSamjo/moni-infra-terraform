@@ -43,13 +43,14 @@ ALB (Application Load Balancer)
 
 ### 도메인 구성
 
-| 도메인             | 대상                      | 포트    |
-|-----------------|-------------------------|-------|
-| `api.moni.my`   | 서비스 EC2 (api-gateway)   | 8080  |
-| `admin.moni.my` | 서비스 EC2 (admin-service) | 19097 |
+| 도메인                | 대상                      | 포트    |
+|--------------------|-------------------------|-------|
+| `api.moni.my`      | 서비스 EC2 (api-gateway)   | 8080  |
+| `admin.moni.my`    | 서비스 EC2 (admin-service) | 19097 |
+| `grafana.moni.my`  | 모니터링 EC2 (Grafana)      | 3000  |
 
 - DNS: AWS Route 53
-- HTTPS 인증서: AWS Certificate Manager (내보내기 불가 공인 인증서, 추가 비용 없음)
+- HTTPS 인증서: AWS Certificate Manager — SAN 방식 (`api.moni.my` + `admin.moni.my` + `grafana.moni.my`), 추가 비용 없음
 - ALB 리스너에서 호스트 기반 라우팅으로 포트 분기 처리
 - Nginx 미사용, ALB로만 라우팅
 ### Okta 커스텀 도메인
@@ -91,17 +92,18 @@ ALB (Application Load Balancer)
 
 ```
 moni-infra-terraform/
-├── main.tf                  # 루트 모듈 (모듈 호출)
-├── variables.tf
-├── outputs.tf
-├── alb/                     # ALB + 타겟그룹 + 리스너
-├── ec2/                     # EC2 인스턴스
-├── vpc/                     # VPC
-├── subnet/                  # 서브넷 (퍼블릭/프라이빗)
+├── main.tf                  # 루트 모듈 (모듈 호출 + Route53 A 레코드)
+├── acm/                     # ACM 인증서 (SAN: api/admin/grafana.moni.my)
+├── alb/                     # ALB + 타겟그룹 3개 + 리스너 + 호스트 기반 룰
+├── ec2/                     # EC2 인스턴스 5개 (service/infra/monitor/bastion/nat)
+├── ecr/                     # ECR 리포지토리 11개 + IAM 역할 + 수명 주기 정책
+├── key-pair/                # EC2 키페어
+├── route53/                 # ACM validation 레코드
+├── s3/                      # 로그 버킷
 ├── security-group/          # 보안 그룹
-├── route53/                 # DNS 레코드
+├── subnet/                  # 서브넷 (퍼블릭 2개 / 프라이빗 2개)
+├── vpc/                     # VPC + IGW + 라우트 테이블
 └── docs/
-    ├── CLAUDE.md            # 이 파일
     ├── .backend/
     │   └── CLAUDE.md        # 백엔드 서비스 상세 문서 (포트, 도커 구성 등)
     ├── IMG-0.png            # 아키텍처 다이어그램 초안
@@ -115,5 +117,7 @@ moni-infra-terraform/
 1. **포트 정보는 백엔드 CLAUDE.md 참조** - `/moni` 의 백엔드 프로젝트 및 `docs/.backend/CLAUDE.md` 확인
 2. **Nginx 미사용** - 포트 라우팅은 ALB 리스너 룰로만 처리
 3. **비용 발생 작업은 사전 안내** - 요금 계산기 사용 후 진행
-4. **ACM 인증서** - `*.moni.my` 와일드카드 인증서 사용, DNS validation
+4. **ACM 인증서** - SAN 방식 (`api.moni.my` + `admin.moni.my` + `grafana.moni.my`), DNS validation
 5. **IMG-1.png 기준으로 작업** - 초안(IMG-0)과 다를 수 있으니 IMG-1 우선
+6. **ECR** - 서비스 EC2에 IAM Instance Profile 연결됨 (`moni-ec2-ecr-profile`), ECR pull 권한 있음
+7. **서비스 EC2 배포** - GitHub Actions CD (stage 브랜치 push 시 자동 배포), ECR 이미지 기반
