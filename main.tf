@@ -37,9 +37,10 @@ module "ec2" {
 }
 
 module "s3" {
-  source      = "./s3"
-  bucket_name = "log-bucket-samzo-moni"
-  acl         = "private"
+  source        = "./s3"
+  bucket_name   = "log-bucket-samzo-moni"
+  acl           = "private"
+  ec2_role_name = module.ecr.ec2_role_name
 }
 
 module "acm" {
