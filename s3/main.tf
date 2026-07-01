@@ -2,6 +2,15 @@ resource "aws_s3_bucket" "this" {
   bucket = var.bucket_name
 }
 
+resource "aws_s3_bucket_public_access_block" "this" {
+  bucket = aws_s3_bucket.this.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 resource "aws_iam_role_policy" "s3_profile_access" {
   name = "moni-s3-profile-access"
   role = var.ec2_role_name
