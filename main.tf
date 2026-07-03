@@ -2,6 +2,11 @@ provider "aws" {
   region = "ap-northeast-2"
 }
 
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+}
+
 module "key_pair" {
   source = "./key-pair"
 }
@@ -41,6 +46,65 @@ module "s3" {
   bucket_name   = "log-bucket-samzo-moni"
   acl           = "private"
   ec2_role_name = module.ecr.ec2_role_name
+}
+
+resource "aws_acm_certificate" "cdn" {
+  provider          = aws.us_east_1
+  domain_name       = "cdn.moni.my"
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+data "aws_route53_zone" "cdn" {
+  name         = "cdn.moni.my"
+  private_zone = false
+}
+
+resource "aws_route53_record" "acm_validation_cdn" {
+  for_each = {
+    for dvo in aws_acm_certificate.cdn.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      type   = dvo.resource_record_type
+      record = dvo.resource_record_value
+    }
+  }
+
+  zone_id         = data.aws_route53_zone.cdn.zone_id
+  name            = each.value.name
+  type            = each.value.type
+  records         = [each.value.record]
+  ttl             = 60
+  allow_overwrite = true
+}
+
+resource "aws_acm_certificate_validation" "cdn" {
+  provider                = aws.us_east_1
+  certificate_arn         = aws_acm_certificate.cdn.arn
+  validation_record_fqdns = [for r in aws_route53_record.acm_validation_cdn : r.fqdn]
+}
+
+resource "aws_route53_record" "cdn" {
+  zone_id         = data.aws_route53_zone.cdn.zone_id
+  name            = "cdn.moni.my"
+  type            = "A"
+  allow_overwrite = true
+
+  alias {
+    name                   = module.cloudfront.cloudfront_domain
+    zone_id                = "Z2FDTNDATAQYW2"
+    evaluate_target_health = false
+  }
+}
+
+module "cloudfront" {
+  source                      = "./cloudfront"
+  bucket_name                 = module.s3.bucket_name
+  bucket_regional_domain_name = module.s3.bucket_regional_domain_name
+  certificate_arn             = aws_acm_certificate_validation.cdn.certificate_arn
+  domain_name                 = "cdn.moni.my"
 }
 
 module "acm" {
