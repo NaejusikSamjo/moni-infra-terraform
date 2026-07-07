@@ -34,6 +34,11 @@ resource "aws_instance" "web1" {
   key_name               = var.key_name
   iam_instance_profile   = var.instance_profile_name
 
+  root_block_device {
+    volume_size = 20
+    volume_type = "gp3"
+  }
+
   tags = {
     Name = "service"
   }
@@ -47,6 +52,11 @@ resource "aws_instance" "web2" {
   availability_zone      = "ap-northeast-2a"
   key_name               = var.key_name
 
+  root_block_device {
+    volume_size = 20
+    volume_type = "gp3"
+  }
+
   tags = {
     Name = "infra"
   }
@@ -56,9 +66,14 @@ resource "aws_instance" "web3" {
   ami                    = "ami-0b69aee074c0d5812"
   instance_type          = "t4g.small"
   subnet_id              = var.private_subnet_ids[0]
-  vpc_security_group_ids = [var.security_group_id]
+  vpc_security_group_ids = [var.security_group_id, "sg-0f5684423fea1ad58"]
   availability_zone      = "ap-northeast-2a"
   key_name               = var.key_name
+
+  root_block_device {
+    volume_size = 20
+    volume_type = "gp3"
+  }
 
   tags = {
     Name = "monitor"
