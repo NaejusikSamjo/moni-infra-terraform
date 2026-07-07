@@ -8,7 +8,7 @@ resource "aws_s3_bucket_cors_configuration" "this" {
   cors_rule {
     allowed_headers = ["content-type"]
     allowed_methods = ["PUT"]
-    allowed_origins = ["https://moni.my"]
+    allowed_origins = ["https://moni.my", "https://www.moni.my"]
     max_age_seconds = 3000
   }
 }
