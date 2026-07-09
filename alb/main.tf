@@ -73,6 +73,33 @@ resource "aws_lb_listener" "https" {
   }
 }
 
+# swagger 경로 차단 (api.moni.my 한정)
+resource "aws_lb_listener_rule" "block_swagger" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 5
+
+  condition {
+    host_header {
+      values = ["api.moni.my"]
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/swagger-ui*", "/webjars*", "/v3/api-docs*"]
+    }
+  }
+
+  action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "application/json"
+      message_body = "{\"status\":404,\"error\":\"Not Found\"}"
+      status_code  = "404"
+    }
+  }
+}
+
 # 호스트 기반 룰: api.moni.my → api-gateway
 resource "aws_lb_listener_rule" "api" {
   listener_arn = aws_lb_listener.https.arn
